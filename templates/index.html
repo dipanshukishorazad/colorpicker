@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Color Picker → Hex Code</title>
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial; padding: 24px; max-width:900px; margin: auto; }
+    .picker { display: flex; gap: 20px; align-items:center; margin-bottom: 18px; }
+    .preview { width:120px; height:120px; border-radius:8px; border:1px solid #ddd; }
+    input[type="text"] { font-size: 1rem; padding:8px; width:180px; }
+    button { padding:8px 12px; cursor:pointer; }
+    .codes { display:flex; gap:12px; align-items:center; margin-top:12px; flex-wrap:wrap; }
+    .chip { background:#f4f4f4; padding:8px 10px; border-radius:6px; font-family:monospace; }
+    label { display:block; font-weight:600; margin-bottom:6px; }
+    .small { font-size:0.9rem; color:#555; }
+  </style>
+</head>
+<body>
+  <h1>Color picker → Hex code</h1>
+
+  <p class="small">Pick a color, or enter a hex code. The page shows the hex, RGB, and lets you copy it.</p>
+
+  <div class="picker">
+    <div>
+      <label for="colorInput">Pick color</label>
+      <input id="colorInput" type="color" value="#007bff">
+    </div>
+
+    <div>
+      <label for="hexInput">Hex code (editable)</label>
+      <input id="hexInput" type="text" value="#007bff" maxlength="7" />
+    </div>
+
+    <div>
+      <label>Preview</label>
+      <div id="preview" class="preview"></div>
+    </div>
+  </div>
+
+  <div class="codes">
+    <div class="chip">HEX: <span id="hexOut">#007bff</span></div>
+    <div class="chip">RGB: <span id="rgbOut">0,123,255</span></div>
+    <button id="copyHex">Copy HEX</button>
+    <button id="copyRGB">Copy RGB</button>
+    <button id="cssVar">Copy CSS var</button>
+  </div>
+
+  <script>
+    const colorInput = document.getElementById('colorInput');
+    const hexInput = document.getElementById('hexInput');
+    const preview = document.getElementById('preview');
+    const hexOut = document.getElementById('hexOut');
+    const rgbOut = document.getElementById('rgbOut');
+    const copyHex = document.getElementById('copyHex');
+    const copyRGB = document.getElementById('copyRGB');
+    const cssVar = document.getElementById('cssVar');
+
+    // utils
+    function hexToRgb(hex) {
+      // Accept formats like #RRGGBB or RRGGBB
+      hex = hex.replace('#', '');
+      if (hex.length === 3) {
+        hex = hex.split('').map(c => c + c).join('');
+      }
+      const bigint = parseInt(hex, 16);
+      const r = (bigint >> 16) & 255;
+      const g = (bigint >> 8) & 255;
+      const b = bigint & 255;
+      return [r, g, b];
+    }
+
+    function normalizeHex(h) {
+      if (!h) return '#000000';
+      h = h.trim();
+      if (h[0] !== '#') h = '#' + h;
+      // If short form like #abc -> expand to #aabbcc
+      if (h.length === 4) {
+        h = '#' + h[1] + h[1] + h[2] + h[2] + h[3] + h[3];
+      }
+      // Validate length
+      if (h.length !== 7) return '#000000';
+      return h.toLowerCase();
+    }
+
+    function updateFromHex(hex) {
+      const nhex = normalizeHex(hex);
+      hexInput.value = nhex;
+      colorInput.value = nhex;
+      preview.style.background = nhex;
+      hexOut.textContent = nhex;
+      const [r,g,b] = hexToRgb(nhex);
+      rgbOut.textContent = `${r}, ${g}, ${b}`;
+    }
+
+    // initial
+    updateFromHex(hexInput.value);
+
+    // events
+    colorInput.addEventListener('input', e => {
+      updateFromHex(e.target.value);
+    });
+
+    hexInput.addEventListener('input', e => {
+      const val = e.target.value;
+      // only update when looks like usable hex (allow partial typing)
+      if (val.length >= 1 && val.length <= 7) {
+        try {
+          updateFromHex(val);
+        } catch (err) {
+          // ignore parse errors while typing
+        }
+      }
+    });
+
+    function copyText(text) {
+      navigator.clipboard.writeText(text)
+        .then(() => {
+          const prev = document.title;
+          document.title = 'Copied!';
+          setTimeout(() => document.title = prev, 900);
+        })
+        .catch(() => alert('Clipboard copy failed — select and press Ctrl+C.'));
+    }
+
+    copyHex.addEventListener('click', () => copyText(hexOut.textContent));
+    copyRGB.addEventListener('click', () => copyText(rgbOut.textContent));
+    cssVar.addEventListener('click', () => copyText(`--theme-color: ${hexOut.textContent};`));
+  </script>
+</body>
+</html>
